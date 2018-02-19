@@ -1,0 +1,23 @@
+---
+- name: SELinux Dependencies
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - libselinux-python
+    - libsemanage-python
+
+- name: Configure SELinux
+  seboolean:
+    name: httpd_can_network_connect
+    state: yes
+    persistent: yes
+
+- name: Install Database
+  include_tasks: db.yml
+
+- name: Install Netbox
+  include_tasks: netbox.yml
+
+- name: Install Webserver
+  include_tasks: webserver.yml

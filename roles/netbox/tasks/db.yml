@@ -1,0 +1,65 @@
+---
+- name: Install Postgres Repo
+  yum:
+    name: https://download.postgresql.org/pub/repos/yum/9.6/redhat/rhel-7-x86_64/pgdg-centos96-9.6-3.noarch.rpm
+    state: present
+
+- name: Install Postgres Packages
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items:
+  - postgresql96
+  - postgresql96-server
+  - postgresql96-devel
+
+- name: Inititialize Postgres
+  shell: /usr/pgsql-9.6/bin/postgresql96-setup initdb
+  args:
+    creates: /var/lib/pgsql/9.6/data/postgresql.conf
+
+- name: Postgres Accept Password-based Authentication
+  replace:
+    path: /var/lib/pgsql/9.6/data/pg_hba.conf
+    regexp: '^(?!#)(.*\s)ident$'
+    replace: '\1md5'
+    backup: yes
+  notify: Restart Postgres
+
+- name: Start Postgres
+  service:
+    name: postgresql-9.6
+    state: started
+    enabled: yes
+
+- name: Install EPEL
+  yum:
+    name: epel-release
+    state: present
+
+- name: Install pip
+  yum:
+    name: python-pip
+    state: present
+
+- name: Install Postgres Module Dependencies
+  pip:
+    name: psycopg2
+    state: present
+
+- name: Create Netbox DB
+  postgresql_db:
+    name: netbox
+    state: present
+  become: yes
+  become_user: postgres
+
+- name: Create DB User
+  postgresql_user:
+    name: netbox
+    password: "{{ netbox_pg_password }}"
+    db: netbox
+    priv: ALL
+    state: present
+  become: yes
+  become_user: postgres

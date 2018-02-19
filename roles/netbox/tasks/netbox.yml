@@ -1,0 +1,59 @@
+---
+- name: Install Dependencies
+  yum:
+   name: "{{ item }}"
+   state: present
+  with_items:
+  - gcc
+  - python34
+  - python34-devel
+  - python34-setuptools
+  - libxml2-devel
+  - libxslt-devel
+  - libffi-devel
+  - graphviz
+  - openssl-devel
+  - redhat-rpm-config
+  - git
+
+- name: Install pip
+  easy_install:
+    name: pip
+    state: latest
+    executable: easy_install-3.4
+
+- name: Create Install Directory
+  file:
+    path: /opt/netbox/
+    state: directory
+
+- name: Download Netbox
+  git:
+    repo: https://github.com/digitalocean/netbox/
+    dest: /opt/netbox
+    version: "{{ netbox_release }}"
+
+- name: Install Python Requirements
+  pip:
+    requirements: /opt/netbox/requirements.txt
+    executable: pip3
+
+- name: Generate Secret
+  shell: /opt/netbox/netbox/generate_secret_key.py
+  args:
+    creates: /opt/netbox/netbox/netbox/configuration.py
+  register: secret_key
+
+- name: Create Configuration File
+  template:
+    src: templates/configuration.py.j2
+    dest: /opt/netbox/netbox/netbox/configuration.py
+    force: no
+  register: config_file
+
+- name: Install Schema
+  shell: python3 /opt/netbox/netbox/manage.py migrate
+  when: config_file | changed
+
+#- name: Create Super User
+#  shell: python3 /opt/netbox/netbox/manage.py createsuperuser --username netbox --email netbox@example.com

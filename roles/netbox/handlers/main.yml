@@ -1,0 +1,15 @@
+---
+- name: Restart Postgres
+  service:
+    name: postgresql-9.6
+    state: restarted
+
+- name: Restart nginx
+  service:
+    name: nginx
+    state: restarted
+
+- name: Restart supervisor
+  service:
+    name: supervisord
+    state: restarted

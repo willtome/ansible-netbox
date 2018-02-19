@@ -1,0 +1,65 @@
+---
+- name: Install nginx
+  yum:
+    name: nginx
+    state: present
+
+- name: Create paths
+  file:
+    path: "{{ item }}"
+    state: directory
+  with_items:
+  - /etc/nginx/sites-available/
+  - /etc/nginx/sites-enabled/
+
+- name: Create netbox site
+  template:
+    src: templates/netbox.conf.j2
+    dest: /etc/nginx/sites-available/netbox.conf
+  notify: Restart nginx
+
+- name: Enable netbox site
+  file:
+    src: /etc/nginx/sites-available/netbox.conf
+    dest: /etc/nginx/sites-enabled/netbox.conf
+    state: link
+  notify: Restart nginx
+
+- name: Configure nginx
+  template:
+    src: templates/nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+  notify: Restart nginx
+
+- name: Start nginx
+  service:
+   name: nginx
+   state: started
+   enabled: yes
+
+- name: Install gunicorn
+  pip:
+   name: gunicorn
+   executable: pip3
+
+- name: Configure gunicorn
+  template:
+    src: templates/gunicorn_config.py.j2
+    dest: /opt/netbox/gunicorn_config.py
+
+- name: Install supervisor
+  yum:
+    name: supervisor
+    state: present
+
+- name: Configure supervisor
+  template:
+    src: templates/netbox.ini.j2
+    dest: /etc/supervisord.d/netbox.ini
+  notify: Restart supervisor
+
+- name: Start supervisor
+  service:
+    name: supervisord
+    state: started
+    enabled: yes
